@@ -10,7 +10,7 @@ void normal_dithering(string input, int factor);
 int main(int argc, char *argv[]) {
   
   string input = "../input/elden_ring_liurnia.png";
-  int factor = 1;
+  int factor = 47;
   // string input = argv[1];
   // string output = argv[2];
 
@@ -32,13 +32,14 @@ void normal_dithering(string input, int factor) {
   for(int i = 0; i < img.rows; i++) {
     for(int j = 0; j < img.cols; j++) {
 
-        Vec3i bgrPixel = img.at<Vec3b>(i, j);
+        Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
+        Vec3i newbgrPixel;
 
-        bgrPixel[0] = round(factor*bgrPixel[0]/255)*255/factor;
-        bgrPixel[1] = round(factor*bgrPixel[1]/255)*255/factor;
-        bgrPixel[2] = round(factor*bgrPixel[2]/255)*255/factor;
+        newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0)*255/factor;
+        newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0)*255/factor;
+        newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0)*255/factor;
 
-        img.at<Vec3b>(i, j) = bgrPixel;
+        img.at<Vec3b>(i, j) = newbgrPixel;
     }
   }
 
@@ -51,22 +52,23 @@ void floyd_steinberg_dithering(string input, int factor) {
   for(int i = 0; i < img.rows-1; i++) {
     for(int j = 0; j < img.cols-1; j++) {
 
-        Vec3i bgrPixel = img.at<Vec3b>(i, j);
+        Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
+        Vec3i newbgrPixel;
 
-        bgrPixel[0] = round(factor*bgrPixel[0]/255) * 255/factor;
-        bgrPixel[1] = round(factor*bgrPixel[1]/255) * 255/factor;
-        bgrPixel[2] = round(factor*bgrPixel[2]/255) * 255/factor;
+        newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0) * 255.0/factor;
+        newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0) * 255.0/factor;
+        newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0) * 255.0/factor;
 
-        Vec3i error = bgrPixel - (Vec3i)img.at<Vec3b>(i, j);
+        Vec3i error = newbgrPixel - oldbgrPixel;
 
         // spreading out the error to other pixels in the image
-        img.at<Vec3b>(i+1, j)     += (error * 7)/16;
-        img.at<Vec3b>(i+1, j+1)   += (error * 1)/16;
-        img.at<Vec3b>(i, j+1)     += (error * 5)/16;
+        img.at<Vec3b>(i+1, j)     += (error * 7)/16.0;
+        img.at<Vec3b>(i+1, j+1)   += (error * 1)/16.0;
+        img.at<Vec3b>(i, j+1)     += (error * 5)/16.0;
         if(i > 0)
-          img.at<Vec3b>(i-1, j+1) += (error * 3)/16;
+          img.at<Vec3b>(i-1, j+1) += (error * 3)/16.0;
 
-        img.at<Vec3b>(i, j) = bgrPixel;
+        img.at<Vec3b>(i, j) = newbgrPixel;
     }
   }
 

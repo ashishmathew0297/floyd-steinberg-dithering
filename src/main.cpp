@@ -10,7 +10,7 @@ void normal_dithering(string input, int factor);
 int main(int argc, char *argv[]) {
   
   string input = "../input/elden_ring_liurnia.png";
-  int factor = 63;
+  int factor = 1;
   // string input = argv[1];
   // string output = argv[2];
 

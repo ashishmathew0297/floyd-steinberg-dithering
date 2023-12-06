@@ -5,14 +5,12 @@ using namespace std;
 using namespace cv;
 
 void floyd_steinberg_dithering(string input, int factor);
-void normal_dithering(string input, int factor);
+void quantization(string input, int factor);
 
 int main(int argc, char *argv[]) {
   
-  string input = "../input/elden_ring_liurnia.png";
-  int factor = 47;
-  // string input = argv[1];
-  // string output = argv[2];
+  string input = "../input/lenna_gray.bmp";
+  int factor = 1;
 
 
   // The best way to confirm that the initial dithering works is to
@@ -20,13 +18,13 @@ int main(int argc, char *argv[]) {
   // needed.
   // cvtColor(img, img, COLOR_BGR2GRAY);
 
-  normal_dithering(input, factor);
+  quantization(input, factor);
   floyd_steinberg_dithering(input, factor);
   
   return 0;
 }
 
-void normal_dithering(string input, int factor) {
+void quantization(string input, int factor) {
   Mat img = imread(input);
 
   for(int i = 0; i < img.rows; i++) {
@@ -35,15 +33,19 @@ void normal_dithering(string input, int factor) {
         Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
         Vec3i newbgrPixel;
 
-        newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0)*255/factor;
-        newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0)*255/factor;
-        newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0)*255/factor;
+        newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0) * floor(255/factor);
+        newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0) * floor(255/factor);
+        newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0) * floor(255/factor);
 
         img.at<Vec3b>(i, j) = newbgrPixel;
     }
   }
 
-  imwrite("../output/elden_ring_liurnia_dithered.png", img);
+  imwrite("../output/lenna_gray_quantized.tif", img);
+}
+
+uint8_t clamp(int value) {
+  return max(0, min(value, 255));
 }
 
 void floyd_steinberg_dithering(string input, int factor) {
@@ -52,25 +54,51 @@ void floyd_steinberg_dithering(string input, int factor) {
   for(int i = 0; i < img.rows-1; i++) {
     for(int j = 0; j < img.cols-1; j++) {
 
-        Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
+        Vec3i oldbgrPixel = img.at<Vec3b>(j, i);
         Vec3i newbgrPixel;
+        Vec3i error;
+
+        if(i < 2 && j < 2) {
+          cout << "before" << endl;
+          cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl;
+        }
 
         newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0) * 255.0/factor;
         newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0) * 255.0/factor;
         newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0) * 255.0/factor;
 
-        Vec3i error = newbgrPixel - oldbgrPixel;
+        img.at<Vec3b>(j, i) = newbgrPixel;
+
+        error[0] = newbgrPixel[0] - oldbgrPixel[0];
+        error[1] = newbgrPixel[1] - oldbgrPixel[1];
+        error[2] = newbgrPixel[2] - oldbgrPixel[2];
 
         // spreading out the error to other pixels in the image
-        img.at<Vec3b>(i+1, j)     += (error * 7)/16.0;
-        img.at<Vec3b>(i+1, j+1)   += (error * 1)/16.0;
-        img.at<Vec3b>(i, j+1)     += (error * 5)/16.0;
-        if(i > 0)
-          img.at<Vec3b>(i-1, j+1) += (error * 3)/16.0;
+        img.at<Vec3b>(j, i+1)[0]     = clamp(img.at<Vec3b>(j, i+1)[0] + (error[0] * 7)/16.0);
+        img.at<Vec3b>(j, i+1)[1]     = clamp(img.at<Vec3b>(j, i+1)[1] + (error[1] * 7)/16.0);
+        img.at<Vec3b>(j, i+1)[2]     = clamp(img.at<Vec3b>(j, i+1)[2] + (error[2] * 7)/16.0);
 
-        img.at<Vec3b>(i, j) = newbgrPixel;
+        img.at<Vec3b>(j+1, i+1)[0]   = clamp(img.at<Vec3b>(j+1, i+1)[0] + (error[0] * 1)/16.0);
+        img.at<Vec3b>(j+1, i+1)[1]   = clamp(img.at<Vec3b>(j+1, i+1)[1] + (error[1] * 1)/16.0);
+        img.at<Vec3b>(j+1, i+1)[2]   = clamp(img.at<Vec3b>(j+1, i+1)[2] + (error[2] * 1)/16.0);
+
+        img.at<Vec3b>(j+1, i)[0]     = clamp(img.at<Vec3b>(j+1, i)[0] + (error[0] * 5)/16.0);
+        img.at<Vec3b>(j+1, i)[1]     = clamp(img.at<Vec3b>(j+1, i)[1] + (error[1] * 5)/16.0);
+        img.at<Vec3b>(j+1, i)[2]     = clamp(img.at<Vec3b>(j+1, i)[2] + (error[2] * 5)/16.0);
+
+        if(i > 0) {
+          img.at<Vec3b>(j+1, i-1)[0] = clamp(img.at<Vec3b>(j+1, i-1)[0] + (error[0] * 3)/16.0);
+          img.at<Vec3b>(j+1, i-1)[1] = clamp(img.at<Vec3b>(j+1, i-1)[1] + (error[1] * 3)/16.0);
+          img.at<Vec3b>(j+1, i-1)[2] = clamp(img.at<Vec3b>(j+1, i-1)[2] + (error[2] * 3)/16.0);
+        }
+        
+        if(i < 3 && j < 3){
+          cout << oldbgrPixel << newbgrPixel << error << endl;
+          cout << "after" << endl;
+          cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl << endl;
+        }
     }
   }
 
-  imwrite("../output/elden_ring_liurnia_steinberg.png", img);
+  imwrite("../output/lenna_gray_steinberg.tif", img);
 }

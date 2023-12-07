@@ -5,7 +5,7 @@ NORMAL=$(tput sgr0)
 YELLOW=$(tput setaf 3)
 BOLD=$(tput bold)
 
-g++ -Wall -std=c++11 -o steinberg main.cpp $(pkg-config --cflags --libs opencv4)
+g++ -Wall -std=c++11 -fopenmp -o steinberg main.cpp $(pkg-config --cflags --libs opencv4)
 
 printf "%s%sPlease Wait:%s Generating images from ../input ...\n" "${BOLD}" "${YELLOW}" "${NORMAL}"
 
@@ -15,12 +15,10 @@ printf "%s%sPlease Wait:%s Generating images from ../input ...\n" "${BOLD}" "${Y
 for filename in ../input/*.*; do
   printf "Generating quantized and dithered results and time readings for %s\n" "$(basename "${filename}")";
   # Removing files if they already exist
-  rm ../time_measurements/"quantizing_$(basename "${filename%.*}").dat"
-  rm ../time_measurements/"dithering_$(basename "${filename%.*}").dat"
+  rm -f ../time_measurements/"quantizing_$(basename "${filename%.*}").dat"
+  rm -f ../time_measurements/"dithering_$(basename "${filename%.*}").dat"
 
-  TIMEFORMAT='%R'
-  { time ./steinberg "$(basename "${filename}")" 0 1; } 2>> ../time_measurements/"quantizing_$(basename "${filename%.*}").dat"
-  { time ./steinberg "$(basename "${filename}")" 1 1; } 2>> ../time_measurements/"dithering_$(basename "${filename%.*}").dat"
+  ./generate_serial_readings_by_factor.sh "$(basename "${filename}")" "$(basename "${filename%.*}")"
 done
 
 printf "%s%sExecution finished:%s Please check the output and time_readings folders for the results\n\n" "${BOLD}" "${GREEN}" "${NORMAL}"

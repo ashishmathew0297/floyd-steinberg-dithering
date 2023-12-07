@@ -1,5 +1,6 @@
 #include "opencv2/opencv.hpp"
 #include <iostream>
+#include <omp.h>
 
 using namespace std;
 using namespace cv;
@@ -13,6 +14,8 @@ int main(int argc, char *argv[]) {
   string input = argv[1]; 
   int dithered = atoi(argv[2]);
   int factor = atoi(argv[3]);
+
+  cout << factor << " ";
 
   dithered == 1 ? floyd_steinberg_dithering(input, factor) : quantization(input, factor);
   

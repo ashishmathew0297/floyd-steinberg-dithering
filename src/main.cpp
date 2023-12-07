@@ -50,55 +50,43 @@ uint8_t clamp(int value) {
 
 void floyd_steinberg_dithering(string input, int factor) {
   Mat img = imread(input);
+  Mat result = img.clone();
 
   for(int i = 0; i < img.rows-1; i++) {
     for(int j = 0; j < img.cols-1; j++) {
 
         Vec3i oldbgrPixel = img.at<Vec3b>(j, i);
         Vec3i newbgrPixel;
-        Vec3i error;
+        int quantization_error[3] = {0};
 
-        if(i < 2 && j < 2) {
-          cout << "before" << endl;
-          cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl;
-        }
+        // if(i < 2 && j < 2) {
+        //   cout << "before" << endl;
+        //   cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl;
+        // }
 
         newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0) * 255.0/factor;
         newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0) * 255.0/factor;
         newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0) * 255.0/factor;
 
-        img.at<Vec3b>(j, i) = newbgrPixel;
-
-        error[0] = newbgrPixel[0] - oldbgrPixel[0];
-        error[1] = newbgrPixel[1] - oldbgrPixel[1];
-        error[2] = newbgrPixel[2] - oldbgrPixel[2];
+        result.at<Vec3b>(j, i) = newbgrPixel;
 
         // spreading out the error to other pixels in the image
-        img.at<Vec3b>(j, i+1)[0]     = clamp(img.at<Vec3b>(j, i+1)[0] + (error[0] * 7)/16.0);
-        img.at<Vec3b>(j, i+1)[1]     = clamp(img.at<Vec3b>(j, i+1)[1] + (error[1] * 7)/16.0);
-        img.at<Vec3b>(j, i+1)[2]     = clamp(img.at<Vec3b>(j, i+1)[2] + (error[2] * 7)/16.0);
-
-        img.at<Vec3b>(j+1, i+1)[0]   = clamp(img.at<Vec3b>(j+1, i+1)[0] + (error[0] * 1)/16.0);
-        img.at<Vec3b>(j+1, i+1)[1]   = clamp(img.at<Vec3b>(j+1, i+1)[1] + (error[1] * 1)/16.0);
-        img.at<Vec3b>(j+1, i+1)[2]   = clamp(img.at<Vec3b>(j+1, i+1)[2] + (error[2] * 1)/16.0);
-
-        img.at<Vec3b>(j+1, i)[0]     = clamp(img.at<Vec3b>(j+1, i)[0] + (error[0] * 5)/16.0);
-        img.at<Vec3b>(j+1, i)[1]     = clamp(img.at<Vec3b>(j+1, i)[1] + (error[1] * 5)/16.0);
-        img.at<Vec3b>(j+1, i)[2]     = clamp(img.at<Vec3b>(j+1, i)[2] + (error[2] * 5)/16.0);
-
-        if(i > 0) {
-          img.at<Vec3b>(j+1, i-1)[0] = clamp(img.at<Vec3b>(j+1, i-1)[0] + (error[0] * 3)/16.0);
-          img.at<Vec3b>(j+1, i-1)[1] = clamp(img.at<Vec3b>(j+1, i-1)[1] + (error[1] * 3)/16.0);
-          img.at<Vec3b>(j+1, i-1)[2] = clamp(img.at<Vec3b>(j+1, i-1)[2] + (error[2] * 3)/16.0);
+        for(int k = 0; k < 3; k++) {
+          quantization_error[k] = (int)img.at<Vec3b>(j, i)[k] - newbgrPixel[k];
+          img.at<Vec3b>(j, i+1)[k]     = clamp((int)img.at<Vec3b>(j, i+1)[k]   + (quantization_error[k] * 7)/16.0);
+          img.at<Vec3b>(j+1, i+1)[k]   = clamp((int)img.at<Vec3b>(j+1, i+1)[k] + (quantization_error[k] * 1)/16.0);
+          img.at<Vec3b>(j+1, i)[k]     = clamp((int)img.at<Vec3b>(j+1, i)[k]   + (quantization_error[k] * 5)/16.0);
+          if (j > 0)
+            img.at<Vec3b>(j-1, i+1)[k] = clamp((int)img.at<Vec3b>(j-1, i+1)[k] + (quantization_error[k] * 3)/16.0);
         }
         
-        if(i < 3 && j < 3){
-          cout << oldbgrPixel << newbgrPixel << error << endl;
-          cout << "after" << endl;
-          cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl << endl;
-        }
+        // if(i < 3 && j < 3){
+        //   cout << oldbgrPixel << newbgrPixel << "[" << quantization_error[0] << "," << quantization_error[1] << "," << quantization_error[2] <<"]" << endl;
+        //   cout << "after" << endl;
+        //   cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl << endl;
+        // }
     }
   }
 
-  imwrite("../output/lenna_gray_steinberg.tif", img);
+  imwrite("../output/lenna_gray_steinberg.tif", result);
 }

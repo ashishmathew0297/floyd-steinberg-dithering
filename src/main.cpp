@@ -9,14 +9,8 @@ void quantization(string input, int factor);
 
 int main(int argc, char *argv[]) {
   
-  string input = "../input/lenna_gray.bmp";
+  string input = "../input/lenna.tif";
   int factor = 1;
-
-
-  // The best way to confirm that the initial dithering works is to
-  // test it on a grayscale image uncomment this line if testing is
-  // needed.
-  // cvtColor(img, img, COLOR_BGR2GRAY);
 
   quantization(input, factor);
   floyd_steinberg_dithering(input, factor);
@@ -41,7 +35,7 @@ void quantization(string input, int factor) {
     }
   }
 
-  imwrite("../output/lenna_gray_quantized.tif", img);
+  imwrite("../output/lenna_quantized.tif", img);
 }
 
 uint8_t clamp(int value) {
@@ -88,5 +82,5 @@ void floyd_steinberg_dithering(string input, int factor) {
     }
   }
 
-  imwrite("../output/lenna_gray_steinberg.tif", result);
+  imwrite("../output/lenna_steinberg.tif", result);
 }

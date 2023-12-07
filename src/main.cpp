@@ -9,7 +9,7 @@ void quantization(string input, int factor);
 
 int main(int argc, char *argv[]) {
   
-  string input = "../input/lenna.tif";
+  string input = "../input/gradient_wb.jpg";
   int factor = 1;
 
   quantization(input, factor);
@@ -35,7 +35,7 @@ void quantization(string input, int factor) {
     }
   }
 
-  imwrite("../output/lenna_quantized.tif", img);
+  imwrite("../output/gradient_wb_quantized.jpg", img);
 }
 
 uint8_t clamp(int value) {
@@ -46,8 +46,8 @@ void floyd_steinberg_dithering(string input, int factor) {
   Mat img = imread(input);
   Mat result = img.clone();
 
-  for(int i = 0; i < img.rows-1; i++) {
-    for(int j = 0; j < img.cols-1; j++) {
+  for(int i = 0; i < img.rows; i++) {
+    for(int j = 0; j < img.cols; j++) {
 
         Vec3i oldbgrPixel = img.at<Vec3b>(j, i);
         Vec3i newbgrPixel;
@@ -67,9 +67,12 @@ void floyd_steinberg_dithering(string input, int factor) {
         // spreading out the error to other pixels in the image
         for(int k = 0; k < 3; k++) {
           quantization_error[k] = (int)img.at<Vec3b>(j, i)[k] - newbgrPixel[k];
-          img.at<Vec3b>(j, i+1)[k]     = clamp((int)img.at<Vec3b>(j, i+1)[k]   + (quantization_error[k] * 7)/16.0);
-          img.at<Vec3b>(j+1, i+1)[k]   = clamp((int)img.at<Vec3b>(j+1, i+1)[k] + (quantization_error[k] * 1)/16.0);
-          img.at<Vec3b>(j+1, i)[k]     = clamp((int)img.at<Vec3b>(j+1, i)[k]   + (quantization_error[k] * 5)/16.0);
+          if(i + 1 < img.rows)
+            img.at<Vec3b>(j, i+1)[k]     = clamp((int)img.at<Vec3b>(j, i+1)[k]   + (quantization_error[k] * 7)/16.0);
+          if(i + 1 < img.rows && j+1 < img.cols)
+            img.at<Vec3b>(j+1, i+1)[k]   = clamp((int)img.at<Vec3b>(j+1, i+1)[k] + (quantization_error[k] * 1)/16.0);
+          if(j + 1 < img.cols)
+            img.at<Vec3b>(j+1, i)[k]     = clamp((int)img.at<Vec3b>(j+1, i)[k]   + (quantization_error[k] * 5)/16.0);
           if (j > 0)
             img.at<Vec3b>(j-1, i+1)[k] = clamp((int)img.at<Vec3b>(j-1, i+1)[k] + (quantization_error[k] * 3)/16.0);
         }
@@ -82,5 +85,5 @@ void floyd_steinberg_dithering(string input, int factor) {
     }
   }
 
-  imwrite("../output/lenna_steinberg.tif", result);
+  imwrite("../output/gradient_wb_steinberg.jpg", result);
 }

@@ -6,12 +6,15 @@ using namespace std;
 using namespace cv;
 
 void floyd_steinberg_dithering(string input, int factor);
-void floyd_steinberg_dithering_parallel(string input, int factor);
+void floyd_steinberg_dithering_parallel(string input, int factor, int num_threads);
 void quantization(string input, int factor);
 void array_deleter(Mat *m);
 
 int main(int argc, char *argv[]) {
   
+  double start = omp_get_wtime();
+
+  // fetching command line arguments
   string input = argv[1]; 
   int dithered = atoi(argv[2]);
   int factor = atoi(argv[3]);
@@ -21,9 +24,11 @@ int main(int argc, char *argv[]) {
   dithered == 1 ? floyd_steinberg_dithering(input, factor) : quantization(input, factor);
   
   if(run_parallel_code == 1)
-    floyd_steinberg_dithering_parallel(input, factor);
+    floyd_steinberg_dithering_parallel(input, factor, num_threads);
 
-  
+  double end = omp_get_wtime();
+  double result = end - start;
+  cout << result << " ";
   return 0;
 }
 
@@ -87,7 +92,7 @@ void floyd_steinberg_dithering(string input, int factor) {
             img.at<Vec3b>(i+1, j+1)[k]   = clamp((int)img.at<Vec3b>(i+1, j+1)[k] + (quantization_error[k] * 1)/16.0);
           if(j + 1 < img.cols)
             img.at<Vec3b>(i, j+1)[k]     = clamp((int)img.at<Vec3b>(i, j+1)[k]   + (quantization_error[k] * 5)/16.0);
-          if (j > 0)
+          if (i + 1 < img.rows && j > 0)
             img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
         }
         
@@ -101,12 +106,19 @@ void floyd_steinberg_dithering(string input, int factor) {
   imwrite("../output/dithered_" + input, result);
 }
 
-void floyd_steinberg_dithering_parallel(string input, int factor) {
+void floyd_steinberg_dithering_parallel(string input, int factor, int num_threads) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
+  // bool progress[img.cols][img.rows] = {false};
 
-  for(int i = 0; i < img.rows; i++) {
-    for(int j = 0; j < img.cols; j++) {
+  omp_set_num_threads(num_threads);
+  // #pragma omp parallel shared(progress)
+  #pragma omp parallel
+  {
+    // https://stackoverflow.com/questions/13224155/how-does-the-omp-ordered-clause-work/
+    #pragma omp for ordered schedule(static,1)
+    for(int i = 0; i < img.rows; i++) {
+      for(int j = 0; j < img.cols; j++) {
 
         Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
         Vec3i newbgrPixel;
@@ -121,16 +133,33 @@ void floyd_steinberg_dithering_parallel(string input, int factor) {
         // spreading out the error to other pixels in the image
         for(int k = 0; k < 3; k++) {
           quantization_error[k] = (int)img.at<Vec3b>(i, j)[k] - newbgrPixel[k];
-          if(i + 1 < img.rows)
-            img.at<Vec3b>(i+1, j)[k]     = clamp((int)img.at<Vec3b>(i+1, j)[k]   + (quantization_error[k] * 7)/16.0);
-          if(i + 1 < img.rows && j+1 < img.cols)
+          if(i + 1 < img.rows) {
+            if(j == img.cols-1){
+              #pragma omp ordered
+              img.at<Vec3b>(i+1, j)[k]     = clamp((int)img.at<Vec3b>(i+1, j)[k]   + (quantization_error[k] * 7)/16.0);
+              // progress[j][i+1] = true;
+            } else {
+              img.at<Vec3b>(i+1, j)[k]     = clamp((int)img.at<Vec3b>(i+1, j)[k]   + (quantization_error[k] * 7)/16.0);
+            }
+          }
+          if(i + 1 < img.rows && j + 1 < img.cols){
             img.at<Vec3b>(i+1, j+1)[k]   = clamp((int)img.at<Vec3b>(i+1, j+1)[k] + (quantization_error[k] * 1)/16.0);
-          if(j + 1 < img.cols)
+          }
+          if(j + 1 < img.cols){
             img.at<Vec3b>(i, j+1)[k]     = clamp((int)img.at<Vec3b>(i, j+1)[k]   + (quantization_error[k] * 5)/16.0);
-          if (j > 0)
+          }
+          if (i + 1 < img.rows && j > 0){
             img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
+            if(j == img.cols - 1){
+              #pragma omp ordered
+              img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
+              // progress[j][i+1] = true;
+            } else {
+              img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
+            }
+          }
         }
-        
+      }
     }
   }
   imwrite("../output/dithered_" + input, result);

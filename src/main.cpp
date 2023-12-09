@@ -2,12 +2,11 @@
 #include <iostream>
 #include <omp.h>
 
-using namespace std;
 using namespace cv;
 
-void floyd_steinberg_dithering_serial(string input, int factor);
-void floyd_steinberg_dithering_parallel(string input, int factor, int num_threads);
-void quantization(string input, int factor);
+void floyd_steinberg_dithering_serial(std::string input, int factor);
+void floyd_steinberg_dithering_parallel(std::string input, int factor, int num_threads);
+void quantization(std::string input, int factor);
 void floyd_steinberg_calculation(Mat &img, Mat &result, int factor, int i, int j);
 
 int main(int argc, char *argv[]) {
@@ -15,7 +14,7 @@ int main(int argc, char *argv[]) {
   double start = omp_get_wtime();
 
   // fetching command line arguments
-  string input = argv[1]; 
+  std::string input = argv[1]; 
   int dithered = atoi(argv[2]);
   int factor = atoi(argv[3]);
   int run_parallel_code = atoi(argv[4]);
@@ -28,11 +27,11 @@ int main(int argc, char *argv[]) {
 
   double end = omp_get_wtime();
   double result = end - start;
-  cout << result << " ";
+  std::cout << result << " ";
   return 0;
 }
 
-void quantization(string input, int factor) {
+void quantization(std::string input, int factor) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
 
@@ -57,7 +56,7 @@ uint8_t clamp(int value) {
   return max(0, min(value, 255));
 }
 
-void floyd_steinberg_dithering_serial(string input, int factor) {
+void floyd_steinberg_dithering_serial(std::string input, int factor) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
   for(int i = 0; i < img.rows; i++) {
@@ -94,7 +93,7 @@ void floyd_steinberg_calculation(Mat &img, Mat &result, int factor, int i, int j
   }
 }
 
-void floyd_steinberg_dithering_parallel(string input, int factor, int num_threads) {
+void floyd_steinberg_dithering_parallel(std::string input, int factor, int num_threads) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
   
@@ -132,16 +131,17 @@ void floyd_steinberg_dithering_parallel(string input, int factor, int num_thread
             workgroup_progress[i] = true;
         } else {
 
-          // Checking previous thread progress in case our current worker thread is
-          // at the third or second last pixel
           // This part of the code acts as the blocking mechanism while tracking the progress
-          // of work in other threads
+          // of work in the thread above the current one ensuring that it is 2 pixels ahead
           if(j+2 < img.cols || j+1 < img.cols)
             while(progress[i-1][j+2] == false && progress[i-1][j+1] == false);
           else if(j == img.cols-1)
             workgroup_progress[i] = true;
           else
             while(workgroup_progress[i-1] == false);
+          
+          // Here we perform the Floyd-Steinberg calculation on the pixel after confirming that
+          // the previous workgroups are done working on it
           floyd_steinberg_calculation(img, result, factor, i, j);
           progress[i][j] = true;
         }
@@ -156,7 +156,7 @@ void floyd_steinberg_dithering_parallel(string input, int factor, int num_thread
   delete[] progress;
   delete [] workgroup_progress;
 
-  imwrite("../output/parallel_dithered_" + input, result);
+  imwrite("../output/parallel_dithered_results/parallel_dithered_" + input, result);
 }
 
 // https://stackoverflow.com/questions/13224155/how-does-the-omp-ordered-clause-work/

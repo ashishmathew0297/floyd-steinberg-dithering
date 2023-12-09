@@ -7,7 +7,7 @@ while [[ i -le threads ]]
 do
   j=1
   printf "%i " "$i"
-  while [[ j -le 1 ]]
+  while [[ j -le 10 ]]
   do
     TIMEFORMAT='%R'
     ./steinberg "$1" 1 1 1 $i

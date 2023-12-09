@@ -118,12 +118,10 @@ void floyd_steinberg_dithering_parallel(string input, int factor, int num_thread
   omp_set_num_threads(num_threads);
   #pragma omp parallel shared(progress,workgroup_progress,img,result)
   {
-    int current_thread = omp_get_thread_num();
     #pragma omp for schedule(static,1)
     for(int i = 0; i < img.rows; i++) {
       
       for(int j = 0; j < img.cols; j++) {
-
         if(i == 0) {
           {
           floyd_steinberg_calculation(img, result, factor, i, j);
@@ -132,15 +130,16 @@ void floyd_steinberg_dithering_parallel(string input, int factor, int num_thread
             workgroup_progress[i] = true;
           }
         } else {
-          // Checking previous thread progress
+          // Checking previous thread progress in case our current worker thread is
+          // at the third or second last pixel
           if(j+2 < img.cols || j+1 < img.cols)
             while(progress[i-1][j+2] == false && progress[i-1][j+1] == false);
+          else if(j == img.cols-1)
+            workgroup_progress[i] = true;
           else
             while(workgroup_progress[i-1] == false);
           floyd_steinberg_calculation(img, result, factor, i, j);
           progress[i][j] = true;
-          if(j == img.cols-1)
-            workgroup_progress[i] = true;
         }
       }
     }
@@ -157,4 +156,4 @@ void floyd_steinberg_dithering_parallel(string input, int factor, int num_thread
 }
 
 // https://stackoverflow.com/questions/13224155/how-does-the-omp-ordered-clause-work/
-// #pragma omp for ordered schedule(static,1)
+// #pragma omp for ordered schedule(static,1) could have worked too but it gave the wrong results

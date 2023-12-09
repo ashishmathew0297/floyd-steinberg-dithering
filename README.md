@@ -6,9 +6,9 @@ An implementation of Floyd Steinberg Dithering using OpenCV and C++ with the end
 The code works on OpenCV 4.8.1. The steps I have taken to install this particular version of the OpenCV are given below. These steps will for the most part work the same way they did on my machine.
 
 ```bash
-/~$ mkdir ~/opencv4.8-tmp && cd ~/opencv4.8-tmp
-/~$ wget https://github.com/opencv/opencv/archive/4.8.1.zip -O opencv.zip
-/~$ wget https://github.com/opencv/opencv_contrib/archive/4.8.1.zip -O $ opencv_contrib.zip
+$ mkdir ~/opencv4.8-tmp && cd ~/opencv4.8-tmp
+$ wget https://github.com/opencv/opencv/archive/4.8.1.zip -O opencv.zip
+$ wget https://github.com/opencv/opencv_contrib/archive/4.8.1.zip -O $ opencv_contrib.zip
 $ unzip opencv.zip
 $ unzip opencv_contrib.zip
 $ mv opencv-4.8.1/ opencv

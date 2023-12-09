@@ -5,7 +5,7 @@
 using namespace std;
 using namespace cv;
 
-void floyd_steinberg_dithering(string input, int factor);
+void floyd_steinberg_dithering_serial(string input, int factor);
 void floyd_steinberg_dithering_parallel(string input, int factor, int num_threads);
 void quantization(string input, int factor);
 void floyd_steinberg_calculation(Mat &img, Mat &result, int factor, int i, int j);
@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   int run_parallel_code = atoi(argv[4]);
   int num_threads = atoi(argv[5]);
 
-  dithered == 1 ? floyd_steinberg_dithering(input, factor) : quantization(input, factor);
+  dithered == 1 ? floyd_steinberg_dithering_serial(input, factor) : quantization(input, factor);
   
   if(run_parallel_code == 1)
     floyd_steinberg_dithering_parallel(input, factor, num_threads);
@@ -50,14 +50,14 @@ void quantization(string input, int factor) {
     }
   }
 
-  imwrite("../output/quantized_" + input, result);
+  imwrite("../output/quantized_results/quantized_" + input, result);
 }
 
 uint8_t clamp(int value) {
   return max(0, min(value, 255));
 }
 
-void floyd_steinberg_dithering(string input, int factor) {
+void floyd_steinberg_dithering_serial(string input, int factor) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
   for(int i = 0; i < img.rows; i++) {
@@ -65,7 +65,7 @@ void floyd_steinberg_dithering(string input, int factor) {
       floyd_steinberg_calculation(img, result, factor, i, j);
     }
   }
-  imwrite("../output/dithered_" + input, result);
+  imwrite("../output/serial_dithered_results/dithered_" + input, result);
 }
 
 
@@ -122,16 +122,20 @@ void floyd_steinberg_dithering_parallel(string input, int factor, int num_thread
     for(int i = 0; i < img.rows; i++) {
       
       for(int j = 0; j < img.cols; j++) {
+        
+        // The first row of pixels gets priority as the thread working on it acts as
+        // a pseudo master for the consequent workgroups
         if(i == 0) {
-          {
           floyd_steinberg_calculation(img, result, factor, i, j);
           progress[i][j] = true;
           if(j == img.cols-1)
             workgroup_progress[i] = true;
-          }
         } else {
+
           // Checking previous thread progress in case our current worker thread is
           // at the third or second last pixel
+          // This part of the code acts as the blocking mechanism while tracking the progress
+          // of work in other threads
           if(j+2 < img.cols || j+1 < img.cols)
             while(progress[i-1][j+2] == false && progress[i-1][j+1] == false);
           else if(j == img.cols-1)

@@ -9,25 +9,24 @@ g++ -Wall -std=c++11 -fopenmp -o steinberg main.cpp $(pkg-config --cflags --libs
 
 # Generating time readings to see if factor for calculation affects the time of execution
 printf "%s%sPlease Wait:%s Generating processed outputs and time vs dithering factor readings for a 7680x4320 resolution image and a 512x512 resolution image ...\n" "${BOLD}" "${YELLOW}" "${NORMAL}"
-./generate_serial_readings_by_factor.sh "RGB_color_gradient_15360x8640.jpg" > "../time_measurements/serial_dithering_time_by_factor_large.dat"
+./generate_serial_readings_by_factor.sh "RGB_color_gradient_7680x4320.png" > "../time_measurements/serial_dithering_time_by_factor_large.dat"
 ./generate_serial_readings_by_factor.sh "lenna.tif" > "../time_measurements/serial_dithering_time_by_factor_small.dat"
 printf "%s%sExecution finished:%s Please check the output and time_readings folders for the results\n\n" "${BOLD}" "${GREEN}" "${NORMAL}"
 
 printf "%s%sPlease Wait:%s Generating time readings for parallelized dithering algorithm on a 512x512 and a 7680x4320 resolution image ...\n" "${BOLD}" "${YELLOW}" "${NORMAL}"
-./generate_parallel_readings.sh "malenia_7680x4320.jpg" > "../time_measurements/parallel_dithering_time.dat"
-./generate_parallel_readings.sh "lenna.tif" > "../time_measurements/parallel_dithering_time.dat"
+./generate_parallel_readings.sh "RGB_color_gradient_7680x4320.png" > "../time_measurements/parallel_dithering_time_large.dat"
+./generate_parallel_readings.sh "lenna.tif" > "../time_measurements/parallel_dithering_time_small.dat"
 printf "%s%sExecution Finished:%s Please check the output folder for the results\n\n" "${BOLD}" "${GREEN}" "${NORMAL}"
 
-
-# Uncomment the code below if you want all the images in the input folder quantized and dithered to a factor of 1
-
-printf "%s%sPlease Wait:%s Generating processed images for all images in ../input ...\n" "${BOLD}" "${YELLOW}" "${NORMAL}"
+# Uncomment the codes below if you want all the images or a particular image in the input folder quantized and dithered
 factor=1
+greyscale=0
+printf "%s%sPlease Wait:%s Generating processed images for all images in ../input ...\n" "${BOLD}" "${YELLOW}" "${NORMAL}"
 for filename in ../input/*.*; do
   echo "Processing $(basename "${filename}")"
-  ./steinberg "$(basename "${filename}")" 0 $factor 0 1 > /dev/null
-  ./steinberg "$(basename "${filename}")" 1 $factor 0 1 > /dev/null
-  ./steinberg "$(basename "${filename}")" 1 $factor 1 12 > /dev/null
+  ./steinberg "$(basename "${filename}")" $greyscale 0 $factor 0 1 > /dev/null
+  ./steinberg "$(basename "${filename}")" $greyscale 1 $factor 0 1 > /dev/null
+  ./steinberg "$(basename "${filename}")" $greyscale 1 $factor 1 12 > /dev/null
 done
 printf "%s%sExecution finished:%s Please check the output folder for the results\n\n" "${BOLD}" "${GREEN}" "${NORMAL}"
 

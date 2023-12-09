@@ -4,9 +4,9 @@
 
 using namespace cv;
 
-void floyd_steinberg_dithering_serial(std::string input, int factor);
-void floyd_steinberg_dithering_parallel(std::string input, int factor, int num_threads);
-void quantization(std::string input, int factor);
+void floyd_steinberg_dithering_serial(std::string input, int greyscale, int factor);
+void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int factor, int num_threads);
+void quantization(std::string input, int greyscale, int factor);
 void floyd_steinberg_calculation(Mat &img, Mat &result, int factor, int i, int j);
 
 int main(int argc, char *argv[]) {
@@ -14,16 +14,17 @@ int main(int argc, char *argv[]) {
   double start = omp_get_wtime();
 
   // fetching command line arguments
-  std::string input = argv[1]; 
-  int dithered = atoi(argv[2]);
-  int factor = atoi(argv[3]);
-  int run_parallel_code = atoi(argv[4]);
-  int num_threads = atoi(argv[5]);
+  std::string input = argv[1];
+  int greyscale = atoi(argv[2]);
+  int dithered = atoi(argv[3]);
+  int factor = atoi(argv[4]);
+  int run_parallel_code = atoi(argv[5]);
+  int num_threads = atoi(argv[6]);
 
-  dithered == 1 ? floyd_steinberg_dithering_serial(input, factor) : quantization(input, factor);
+  dithered == 1 ? floyd_steinberg_dithering_serial(input, greyscale, factor) : quantization(input, greyscale, factor);
   
   if(run_parallel_code == 1)
-    floyd_steinberg_dithering_parallel(input, factor, num_threads);
+    floyd_steinberg_dithering_parallel(input, greyscale, factor, num_threads);
 
   double end = omp_get_wtime();
   double result = end - start;
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-void quantization(std::string input, int factor) {
+void quantization(std::string input, int greyscale, int factor) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
 
@@ -56,8 +57,10 @@ uint8_t clamp(int value) {
   return max(0, min(value, 255));
 }
 
-void floyd_steinberg_dithering_serial(std::string input, int factor) {
+void floyd_steinberg_dithering_serial(std::string input, int greyscale, int factor) {
   Mat img = imread("../input/" + input);
+  if(greyscale == 1)
+    cvtColor(img, img, COLOR_BGR2GRAY);
   Mat result = img.clone();
   for(int i = 0; i < img.rows; i++) {
     for(int j = 0; j < img.cols; j++) {
@@ -93,8 +96,10 @@ void floyd_steinberg_calculation(Mat &img, Mat &result, int factor, int i, int j
   }
 }
 
-void floyd_steinberg_dithering_parallel(std::string input, int factor, int num_threads) {
+void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int factor, int num_threads) {
   Mat img = imread("../input/" + input);
+  if(greyscale == 1)
+    cvtColor(img, img, COLOR_BGR2GRAY);
   Mat result = img.clone();
   
   // This tracks the progress of the threads through the rows

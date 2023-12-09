@@ -10,7 +10,7 @@ do
   while [[ j -le 10 ]]
   do
     TIMEFORMAT='%R'
-    ./steinberg "$1" 1 $((2**i - 1)) 0 1
+    ./steinberg "$1" 0 1 $((2**i - 1)) 0 1
     ((j = j + 1))
   done
   printf "\n"

@@ -1,16 +1,16 @@
 #!/bin/bash
 
-i=1
-factor=8
+threads=12
 
-while [[ i -le factor ]]
+i=1
+while [[ i -le threads ]]
 do
   j=1
-  printf "%i " "$((2**i - 1))"
-  while [[ j -le 10 ]]
+  printf "%i " "$i"
+  while [[ j -le 1 ]]
   do
     TIMEFORMAT='%R'
-    ./steinberg "$1" 1 $((2**i - 1)) 1 1
+    ./steinberg "$1" 1 1 1 $i
     ((j = j + 1))
   done
   printf "\n"

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-i=1
 factor=8
 
+i=1
 while [[ i -le factor ]]
 do
   j=1

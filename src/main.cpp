@@ -8,7 +8,7 @@ using namespace cv;
 void floyd_steinberg_dithering(string input, int factor);
 void floyd_steinberg_dithering_parallel(string input, int factor, int num_threads);
 void quantization(string input, int factor);
-void array_deleter(Mat *m);
+void floyd_steinberg_calculation(Mat &img, Mat &result, int factor, int i, int j);
 
 int main(int argc, char *argv[]) {
   
@@ -53,10 +53,6 @@ void quantization(string input, int factor) {
   imwrite("../output/quantized_" + input, result);
 }
 
-void array_deleter(Mat *m) {
-  delete [] m;
-}
-
 uint8_t clamp(int value) {
   return max(0, min(value, 255));
 }
@@ -64,103 +60,101 @@ uint8_t clamp(int value) {
 void floyd_steinberg_dithering(string input, int factor) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
-
   for(int i = 0; i < img.rows; i++) {
     for(int j = 0; j < img.cols; j++) {
-
-        Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
-        Vec3i newbgrPixel;
-        int quantization_error[3] = {0};
-
-        // if(i < 2 && j < 2) {
-        //   cout << "before" << endl;
-        //   cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl;
-        // }
-
-        newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0) * 255.0/factor;
-        newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0) * 255.0/factor;
-        newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0) * 255.0/factor;
-
-        result.at<Vec3b>(i, j) = newbgrPixel;
-
-        // spreading out the error to other pixels in the image
-        for(int k = 0; k < 3; k++) {
-          quantization_error[k] = (int)img.at<Vec3b>(i, j)[k] - newbgrPixel[k];
-          if(i + 1 < img.rows)
-            img.at<Vec3b>(i+1, j)[k]     = clamp((int)img.at<Vec3b>(i+1, j)[k]   + (quantization_error[k] * 7)/16.0);
-          if(i + 1 < img.rows && j+1 < img.cols)
-            img.at<Vec3b>(i+1, j+1)[k]   = clamp((int)img.at<Vec3b>(i+1, j+1)[k] + (quantization_error[k] * 1)/16.0);
-          if(j + 1 < img.cols)
-            img.at<Vec3b>(i, j+1)[k]     = clamp((int)img.at<Vec3b>(i, j+1)[k]   + (quantization_error[k] * 5)/16.0);
-          if (i + 1 < img.rows && j > 0)
-            img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
-        }
-        
-        // if(i < 3 && j < 3){
-        //   cout << oldbgrPixel << newbgrPixel << "[" << quantization_error[0] << "," << quantization_error[1] << "," << quantization_error[2] <<"]" << endl;
-        //   cout << "after" << endl;
-        //   cout << img.at<Vec3b>(0, 0) << img.at<Vec3b>(0, 1) << img.at<Vec3b>(0, 2) << img.at<Vec3b>(0, 3) << endl << endl;
-        // }
+      floyd_steinberg_calculation(img, result, factor, i, j);
     }
   }
   imwrite("../output/dithered_" + input, result);
+}
+
+
+void floyd_steinberg_calculation(Mat &img, Mat &result, int factor, int i, int j) {
+  Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
+  Vec3i newbgrPixel;
+  int quantization_error[3] = {0};
+
+  newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0) * 255.0/factor;
+  newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0) * 255.0/factor;
+  newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0) * 255.0/factor;
+
+  result.at<Vec3b>(i, j) = newbgrPixel;
+
+  // spreading out the error to other pixels in the image
+  for(int k = 0; k < 3; k++) {
+    quantization_error[k] = (int)img.at<Vec3b>(i, j)[k] - newbgrPixel[k];
+    if(i + 1 < img.rows)
+      img.at<Vec3b>(i+1, j)[k]   = clamp((int)img.at<Vec3b>(i+1, j)[k]   + (quantization_error[k] * 7)/16.0);
+    if(i + 1 < img.rows && j + 1 < img.cols)
+      img.at<Vec3b>(i+1, j+1)[k] = clamp((int)img.at<Vec3b>(i+1, j+1)[k] + (quantization_error[k] * 1)/16.0);
+    if(j + 1 < img.cols)
+      img.at<Vec3b>(i, j+1)[k]   = clamp((int)img.at<Vec3b>(i, j+1)[k]   + (quantization_error[k] * 5)/16.0);
+    if (i + 1 < img.rows && j > 0)
+      img.at<Vec3b>(i+1, j-1)[k] = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
+  }
 }
 
 void floyd_steinberg_dithering_parallel(string input, int factor, int num_threads) {
   Mat img = imread("../input/" + input);
   Mat result = img.clone();
-  // bool progress[img.cols][img.rows] = {false};
+  
+  // This tracks the progress of the threads through the rows
+  bool** progress = new bool*[img.rows];
 
+  // This keeps track of the current workgroup's progress
+  bool* workgroup_progress = new bool[img.rows];
+
+  for (int i = 0; i < img.rows; i++){
+    progress[i] = new bool[img.cols];
+  }
+  for (int i = 0; i < img.rows; i++){
+    for (int j = 0; j < img.cols; j++)
+      progress[i][j] = false;
+  }
+  for (int k = 0; k < img.rows; k++){
+    workgroup_progress[k] = false;
+  }
+  
   omp_set_num_threads(num_threads);
-  // #pragma omp parallel shared(progress)
-  #pragma omp parallel
+  #pragma omp parallel shared(progress,workgroup_progress,img,result)
   {
-    // https://stackoverflow.com/questions/13224155/how-does-the-omp-ordered-clause-work/
-    #pragma omp for ordered schedule(static,1)
+    int current_thread = omp_get_thread_num();
+    #pragma omp for schedule(static,1)
     for(int i = 0; i < img.rows; i++) {
+      
       for(int j = 0; j < img.cols; j++) {
 
-        Vec3i oldbgrPixel = img.at<Vec3b>(i, j);
-        Vec3i newbgrPixel;
-        int quantization_error[3] = {0};
-
-        newbgrPixel[0] = round(factor*oldbgrPixel[0]/255.0) * 255.0/factor;
-        newbgrPixel[1] = round(factor*oldbgrPixel[1]/255.0) * 255.0/factor;
-        newbgrPixel[2] = round(factor*oldbgrPixel[2]/255.0) * 255.0/factor;
-
-        result.at<Vec3b>(i, j) = newbgrPixel;
-
-        // spreading out the error to other pixels in the image
-        for(int k = 0; k < 3; k++) {
-          quantization_error[k] = (int)img.at<Vec3b>(i, j)[k] - newbgrPixel[k];
-          if(i + 1 < img.rows) {
-            if(j == img.cols-1){
-              #pragma omp ordered
-              img.at<Vec3b>(i+1, j)[k]     = clamp((int)img.at<Vec3b>(i+1, j)[k]   + (quantization_error[k] * 7)/16.0);
-              // progress[j][i+1] = true;
-            } else {
-              img.at<Vec3b>(i+1, j)[k]     = clamp((int)img.at<Vec3b>(i+1, j)[k]   + (quantization_error[k] * 7)/16.0);
-            }
+        if(i == 0) {
+          {
+          floyd_steinberg_calculation(img, result, factor, i, j);
+          progress[i][j] = true;
+          if(j == img.cols-1)
+            workgroup_progress[i] = true;
           }
-          if(i + 1 < img.rows && j + 1 < img.cols){
-            img.at<Vec3b>(i+1, j+1)[k]   = clamp((int)img.at<Vec3b>(i+1, j+1)[k] + (quantization_error[k] * 1)/16.0);
-          }
-          if(j + 1 < img.cols){
-            img.at<Vec3b>(i, j+1)[k]     = clamp((int)img.at<Vec3b>(i, j+1)[k]   + (quantization_error[k] * 5)/16.0);
-          }
-          if (i + 1 < img.rows && j > 0){
-            img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
-            if(j == img.cols - 1){
-              #pragma omp ordered
-              img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
-              // progress[j][i+1] = true;
-            } else {
-              img.at<Vec3b>(i+1, j-1)[k]   = clamp((int)img.at<Vec3b>(i+1, j-1)[k] + (quantization_error[k] * 3)/16.0);
-            }
-          }
+        } else {
+          // Checking previous thread progress
+          if(j+2 < img.cols || j+1 < img.cols)
+            while(progress[i-1][j+2] == false && progress[i-1][j+1] == false);
+          else
+            while(workgroup_progress[i-1] == false);
+          floyd_steinberg_calculation(img, result, factor, i, j);
+          progress[i][j] = true;
+          if(j == img.cols-1)
+            workgroup_progress[i] = true;
         }
       }
     }
   }
-  imwrite("../output/dithered_" + input, result);
+
+  //Freeing up space taken up by trackers
+  for (int i = 0; i < img.rows; i++){
+    delete[] progress[i];
+  }
+  delete[] progress;
+  delete [] workgroup_progress;
+
+  imwrite("../output/parallel_dithered_" + input, result);
 }
+
+// https://stackoverflow.com/questions/13224155/how-does-the-omp-ordered-clause-work/
+// #pragma omp for ordered schedule(static,1)

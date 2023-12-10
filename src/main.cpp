@@ -165,4 +165,5 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
 }
 
 // https://stackoverflow.com/questions/13224155/how-does-the-omp-ordered-clause-work/
-// #pragma omp for ordered schedule(static,1) could have worked too but it gave the wrong results
+// #pragma omp for ordered schedule(static,1) could have worked too
+// but it gave the wrong results for previous iterations of the code

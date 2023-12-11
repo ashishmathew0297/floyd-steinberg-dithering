@@ -9,7 +9,6 @@ do
   printf "%i " "$i"
   while [[ j -le 10 ]]
   do
-    TIMEFORMAT='%R'
     ./steinberg "$1" 0 1 1 1 $i
     ((j = j + 1))
   done

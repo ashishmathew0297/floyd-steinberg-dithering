@@ -105,9 +105,6 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
   // This tracks the progress of the threads through the rows
   bool** progress = new bool*[img.rows];
 
-  // This keeps track of the current workgroup's progress
-  bool* workgroup_progress = new bool[img.rows];
-
   for (int i = 0; i < img.rows; i++){
     progress[i] = new bool[img.cols];
   }
@@ -115,12 +112,9 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
     for (int j = 0; j < img.cols; j++)
       progress[i][j] = false;
   }
-  for (int k = 0; k < img.rows; k++){
-    workgroup_progress[k] = false;
-  }
   
   omp_set_num_threads(num_threads);
-  #pragma omp parallel shared(progress,workgroup_progress,img,result)
+  #pragma omp parallel shared(progress,img,result)
   {
     #pragma omp for schedule(static,1)
     for(int i = 0; i < img.rows; i++) {
@@ -132,18 +126,15 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
         if(i == 0) {
           floyd_steinberg_calculation(img, result, factor, i, j);
           progress[i][j] = true;
-          if(j == img.cols-1)
-            workgroup_progress[i] = true;
         } else {
+          // From this block, the execution of rows other than the first row will be handled
 
           // This part of the code acts as the blocking mechanism while tracking the progress
           // of work in the thread above the current one ensuring that it is 2 pixels ahead
-          if(j+2 < img.cols || j+1 < img.cols)
-            while(progress[i-1][j+2] == false && progress[i-1][j+1] == false);
-          else if(j == img.cols-1)
-            workgroup_progress[i] = true;
-          else
-            while(workgroup_progress[i-1] == false);
+          if(j+2 < img.cols)
+            while(progress[i-1][j+2] == false);
+          else if(j+1 < img.cols)
+            while(progress[i-1][j+1] == false);
           
           // Here we perform the Floyd-Steinberg calculation on the pixel after confirming that
           // the previous workgroups are done working on it
@@ -159,7 +150,6 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
     delete[] progress[i];
   }
   delete[] progress;
-  delete [] workgroup_progress;
 
   imwrite("../output/parallel_dithered_results/parallel_dithered_" + input, result);
 }

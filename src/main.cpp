@@ -118,7 +118,6 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
   {
     #pragma omp for schedule(static,1)
     for(int i = 0; i < img.rows; i++) {
-      
       for(int j = 0; j < img.cols; j++) {
         
         // The first row of pixels gets priority as the thread working on it acts as
@@ -127,14 +126,12 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
           floyd_steinberg_calculation(img, result, factor, i, j);
           progress[i][j] = true;
         } else {
-          // From this block, the execution of rows other than the first row will be handled
+          // From this block onwards, the execution of rows other than the first row will be handled
 
-          // This part of the code acts as the blocking mechanism while tracking the progress
-          // of work in the thread above the current one ensuring that it is 2 pixels ahead
+          // The code below acts as the blocking mechanism for the thread using the progress
+          // of work in the thread above the current one such that it is 2 pixels ahead
           if(j+2 < img.cols)
             while(progress[i-1][j+2] == false);
-          else if(j+1 < img.cols)
-            while(progress[i-1][j+1] == false);
           
           // Here we perform the Floyd-Steinberg calculation on the pixel after confirming that
           // the previous workgroups are done working on it

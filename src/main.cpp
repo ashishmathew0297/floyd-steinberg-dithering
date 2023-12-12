@@ -120,21 +120,23 @@ void floyd_steinberg_dithering_parallel(std::string input, int greyscale, int fa
     for(int i = 0; i < img.rows; i++) {
       for(int j = 0; j < img.cols; j++) {
         
-        // The first row of pixels gets priority as the thread working on it acts as
-        // a pseudo master for the consequent workgroups
+        // The first row of pixels gets priority as the thread working 
+        // on it acts as a pseudo master for the consequent threads
         if(i == 0) {
           floyd_steinberg_calculation(img, result, factor, i, j);
           progress[i][j] = true;
         } else {
-          // From this block onwards, the execution of rows other than the first row will be handled
+          // From this block onwards, the execution of rows other than
+          //  the first row will be handled
 
-          // The code below acts as the blocking mechanism for the thread using the progress
-          // of work in the thread above the current one such that it is 2 pixels ahead
+          // The code below acts as the execution blocking mechanism
+          // for the thread using the progress of work in the thread above
+          // such that it is 2 pixels ahead
           if(j+2 < img.cols)
             while(progress[i-1][j+2] == false);
           
-          // Here we perform the Floyd-Steinberg calculation on the pixel after confirming that
-          // the previous workgroups are done working on it
+          // Here we perform the Floyd-Steinberg calculation on the pixel after
+          // confirming that the previous threads are done working on it
           floyd_steinberg_calculation(img, result, factor, i, j);
           progress[i][j] = true;
         }

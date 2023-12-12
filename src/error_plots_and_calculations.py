@@ -45,9 +45,6 @@ strong_scaling_times_small = np.mean(parallel_time_data_small[:,1:], axis=1)
 strong_scaling_speedup_large = np.full_like(strong_scaling_times_large, strong_scaling_times_large[0])/strong_scaling_times_large
 strong_scaling_speedup_small = np.full_like(strong_scaling_times_small, strong_scaling_times_small[0])/strong_scaling_times_small
 
-print(strong_scaling_speedup_large)
-print(strong_scaling_speedup_small)
-
 fig_2, axis_2 = plt.subplots()
 axis_3 = axis_2.twinx()
 ln1 = axis_2.plot(number_of_threads, strong_scaling_speedup_large, color='#b58900', linestyle='-', label=r'$\mathbf{Speedup\;for\;a\;large\;image}$')

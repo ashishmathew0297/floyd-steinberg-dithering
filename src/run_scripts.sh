@@ -21,10 +21,10 @@ printf "%s%sExecution Finished:%s Please check the output folder for the results
 
 rm steinberg
 
-python3 error_plots_and_calculations.py
+python3 plots_and_calculations.py
 
 # This version is to be run in case the Qt package causes issus
-# QT_QPA_PLATFORM=offscreen python3 error_plots_and_calculations.py
+# QT_QPA_PLATFORM=offscreen python3 plots_and_calculations.py
 
 #=================================================================================================
 

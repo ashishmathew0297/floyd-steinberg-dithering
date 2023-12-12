@@ -50,7 +50,7 @@ top=0.65in
 
 \section{Introduction}\label{Introduction}
 
-We have seen a great deal of development in digital media in today's world, especially in the field of image processing, where the quality of images generated has increased with resolutions ranging from a few thousand pixels to several millions of pixels. Consequently, we have also seen several solutions to handling these images when using hardware with low specifications. One of the main solutions used is \textbf{dithering}. In this project we will be looking into dithering algorithms, specifically the Floyd-Steinberg dithering algorithm\cite{Steinberg} in the context of High-Performance Computing and seeing whether parallelized processing would be an effective way to improve its performance on large images.
+We have seen a great deal of development in digital media in today's world, especially in the field of image processing, where the quality of images generated has increased with resolutions ranging from a few thousand to several millions of pixels. Consequently, we have also seen several solutions to handling these images when using hardware with low specifications. One of the main solutions used is \textbf{dithering}. In this project we will be looking into dithering algorithms, specifically the Floyd-Steinberg dithering algorithm\cite{Steinberg} in the context of High-Performance Computing to deduce whether parallelized processing would be an effective way to improve its performance on large images.
 
 \subsection{What is Dithering?}\label{Dithering Intro}
 
@@ -95,7 +95,7 @@ $$\text{Number of Possible colors} = 2^8\times2^8\times2^8 = 16,777,216$$
 
 $$\text{Number of Possible colors} = 2\times2\times2 = 8$$
 
-\noindent which is much lesser. However, as a consequence, we notice distinct banding in the resultant image, making it obvious to see that the quality of it has degraded. This is where the error diffusion comes into the picture.
+\noindent which is much lesser. However, as a consequence, we notice distinct color banding in the resultant image, making it obvious to see that its quality has degraded. This is where the error diffusion comes into the picture.
 
 \medskip
 
@@ -117,10 +117,10 @@ $$\text{Number of Possible colors} = 2\times2\times2 = 8$$
   \caption{An example of how quantization leads to banding in images}
 \end{figure}
 
-\noindent Instead of moving on to the next pixel directly after quantizing the given pixel, we would diffuse the error with the following steps\cite{guilloteau:hal}
+\noindent Instead of moving on to the next pixel directly after quantizing the current pixel, we would diffuse the error with the following steps\cite{guilloteau:hal}
 
 \begin{enumerate}
-    \item Take the current pixel, generate a new color value for it based on a threshold \textit{factor}. For a factor of 1, the threshold would be the midway point, leading to two possible values per channel, either 0 or 255. Similarly, for a factor of 2, we would have 3 different possible colors, and so on.
+    \item Take the current pixel and generate a new color value for it based on a threshold \textit{factor}. For a factor of 1, the threshold would be the midway point, leading to two possible values per channel, either 0 or 255. Similarly, for a factor of 2, we would have 3 different possible colors, and so on.
 
     \item Find the error between the original BGR color value of the given pixel and the newly found quantized value. We take this to be the \textit{quantization error}.
 
@@ -223,31 +223,11 @@ for each row from top to bottom:
         image[column+1][row+1] = clamp(image[column+1][row+1] + (quantization_error*1/16))
         image[column][row+1]   = clamp(image[column][row+1]   + (quantization_error*5/16))
         image[column+1][row-1] = clamp(image[column+1][row-1] + (quantization_error*3/16))
-\end{minted}
 
-\noindent The quantization function acting on each pixel of the image is depicted as
-\begin{minted}[
-frame=lines,
-framesep=2mm,
-baselinestretch=1.2,
-bgcolor=Cornsilk2,
-fontsize=\footnotesize,
-linenos
-]{Python}
-function quantize(value, factor):
-    return round(factor * value/255.0) * 255/factor
-\end{minted}
+function quantize(pixel, factor):
+    return round(factor * pixel/255.0) * 255/factor
 
-\noindent The spreading of the quantization error can lead to the values of the color channels going either above 255 or below 0. Hence we implement a clamping function to hold these values within the given range. The clamping function can be depicted as.
-
-\begin{minted}[
-frame=lines,
-framesep=2mm,
-baselinestretch=1.2,
-bgcolor=Cornsilk2,
-fontsize=\footnotesize,
-linenos
-]{Python}
+# This function prevents the color values from going above 255 or below 0
 function clamp(value):
     return max(0, min(value, 255))
 \end{minted}
@@ -256,14 +236,13 @@ function clamp(value):
 
 \section{Implementing the Floyd-Steinberg Dithering Algorithm}\label{Implementing Floyd-Steinberg Dithering}
 
-We implement the pseudocode in section [\ref{Floyd-Steinberg Pseudocode}] in C++ using OpenCV to access and manipulate the pixel information of the image. We are interested in seeing the performance of the algorithm with both small and large images, which we can see below.
+We implement the pseudocode in section [\ref{Floyd-Steinberg Pseudocode}] in C++ using OpenCV to access and manipulate the pixel information of the image. The following observations were made on two test images:
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\textwidth]{graphs/serial_time_readings.png}
-    \caption{Serial Time Readings for a Small (512x512px) and Large (7680x4320px) Image}
-    \label{fig:serial_readings}
-\end{figure}
+\begin{itemize}
+    \item Processing a small test image of 512x512 dimensions takes, on average, 0.0965 seconds.
+
+    \item Processing a large test image of 7680x4320 dimensions takes, on average, 11.07 seconds.
+\end{itemize}
 
 \section{Parallelizing the Floyd-Steinberg Dithering Algorithm}
 
@@ -272,15 +251,12 @@ We implement the pseudocode in section [\ref{Floyd-Steinberg Pseudocode}] in C++
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{images/Floyd_process.png}
+    \includegraphics[width=0.5\textwidth]{images/Floyd_process.png}
     \caption{B3 has to wait for pixel calculations from A2, A3, A4 and B2 before it can be worked on}
     \label{fig:process_sketch}
 \end{figure}
 
-\noindent If we want to process B3, we have to wait for A2, A3, A4 and B2 to be processed before we can start working. This applies to almost every pixel in the picture except the first row. In the first row, the pixels do not have any restriction in being processed as they only depend on the pixels preceeding them on the same row.
-
-\medskip
-\noindent In our implementation, we would divide the image by rows and assign the threads in such a way that each thread takes charge of a single row of pixels. We achieve this with the help of \textit{static scheduling}.
+\noindent If we want to process B3, we have to wait for A2, A3, A4 and B2 to be processed before we can start working. This applies to almost every pixel in the picture except the first row. In the first row, the pixels do not have any restriction in being processed as they only depend on the pixels preceding them on the same row. In our implementation, we divide the image by rows and assign the threads in such a way that each thread takes charge of a single row of pixels. We achieve this with the help of \textit{static scheduling} using OpenMP's \texttt{schedule(static,1)} directive.
 
 \medskip
 \noindent Now, as Thread 0 begins processing the first row of pixels, Thread 1 cannot work on its current pixel until Thread 0 moves forward by a sufficient enough distance such that Thread 1's current pixel is completely processed. In this case, Thread 0 will have to be a minimum of 2 spaces ahead of Thread 1 for it to be able to safely work on its current pixel. The same logic can be applied to the subsequent threads working on the image. \textbf{Hence, for a pixel to be considered safe for processing, the pixel one space above and two spaces ahead should be in a completed state}.
@@ -303,37 +279,50 @@ We implement the pseudocode in section [\ref{Floyd-Steinberg Pseudocode}] in C++
 
 \section{Results and Obsesrvations}
 
-\noindent After implementing the parallelized version of this algorithm in our code, we perform a strong scaling test with the same images we used before in section [\ref{Implementing Floyd-Steinberg Dithering}]. The results for the same are shown below.
+\noindent After implementing the parallelized version of this algorithm in our code, we run it on the same test images we used before in section [\ref{Implementing Floyd-Steinberg Dithering}] and make the following initial observations:
 
-\begin{figure}[h]
+\begin{itemize}
+    \item Processing a small test image of 512x512 dimensions on 1 thread takes, on average, 0.189 seconds.
+
+    \item Processing a small test image of 512x512 dimensions on 12 threads takes, on average, 0.127 seconds.
+
+    \item Processing a large test image of 7680x4320 dimensions on 1 thread takes, on average, 21.675  seconds.
+
+    \item Processing a large test image of 7680x4320 dimensions on 12 threads takes, on average, 14.322 seconds.
+\end{itemize}
+
+\medskip
+\noindent We then perform a strong scaling test with the same images used in section [\ref{Implementing Floyd-Steinberg Dithering}]. The results for the strong scaling tests are shown on the next page [Fig.\ref{fig:scaling_tests}]. We would ideally also perform weak scaling tests on our algorithm, however, to be able to do so, we would need to find a set of quantifiable images with pixel resolutions that would scale accordingly with the number of threads being used, and also in such a way that the workload taken by each thread scales up evenly. I tried searching for, and even creating these images myself, but was unable to do so.
+
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.55\textwidth]{graphs/strong_scaling_test_plots.png}
     \caption{Strong Scaling Tests for a Small (512x512px) and Large (7680x4320px) Image}
-    \label{fig:parallel_readings}
+    \label{fig:scaling_tests}
 \end{figure}
 
-\noindent For a single thread, our program takes more than double the amount of time needed to process the same image in serial. As we increase the number of threads, we see some improvement in the speedup, which reaches a saturation point after just 2 threads and begin to plateau while approaching 12 threads.
+\noindent We observe that, for a single thread, our program takes more than double the amount of time needed to process the same image in serial. As we increase the number of threads, we see some improvement in the speedup, but it reaches a saturation point after just 2 threads and then begins to plateau while approaching 12 threads. Even at 12 threads, our code was unable to process the images at faster times than our serial code.
 
 \medskip
 \noindent To confirm that our parallelized dithering algorithm gives the same output as the serial version of the same, we use a 100x100 pixel test image and run it through the serial and parallel versions of the code. Due to the size of this image, each of the pixels can easily be distinguished from one another, hence allowing us to visually compare the results of our programs.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.40\textwidth]{images/RGB_color_gradient_100x100.png}
+    \includegraphics[width=0.30\textwidth]{images/RGB_color_gradient_100x100.png}
     \caption{The Original Image}
     \label{fig:confirmation_image}
 \end{figure}
 
 \begin{figure}[h]
   \centering
-  \begin{subfigure}[t]{0.40\textwidth}
+  \begin{subfigure}[t]{0.30\textwidth}
     \centering
     \includegraphics[width=\textwidth]{images/dithered_RGB_color_gradient_100x100.png}
     \caption{Serial Dithering Result}
     \label{fig:serial_dithering_confirmation}
   \end{subfigure}
   ~
-  \begin{subfigure}[t]{0.40\textwidth}
+  \begin{subfigure}[t]{0.30\textwidth}
     \centering
     \includegraphics[width=\textwidth]{images/parallel_dithered_RGB_color_gradient_100x100.png}
     \caption{Parallel Dithering Result}
@@ -344,24 +333,32 @@ We implement the pseudocode in section [\ref{Floyd-Steinberg Pseudocode}] in C++
 
 \section{Conclusion and Future Scope}
 
-We were able to successfully implement the Floyd-Steinberg Dithering Algorithm in parallel, but, as can be seen from the scaling test, its performance is much lower than what we would have normally expected. This can be due to several reasons.
+We were able to successfully implement the Floyd-Steinberg Dithering Algorithm in parallel, and the processed images generated by it are, from what we can observe, highly accurate to the original result from the serial version of the code.
 
 \medskip
-\noindent  Considering the algorithm itself, the calculations being performed are simple, which would reduce its performance in a parallel computing sense. We would see a definite increase in performance if the calculations being done were more complex, such as the handling of floating point calculations.
+\noindent However, as can be seen from the strong scaling test, the performance of the parallel code is much lower than what we would have normally expected. Judging from our approach to parallelizing this algorithm, the processing speed of all the other threads is highly dependent on a single thread's processing speed, i.e. the thread working on the topmost row of pixels. This could have severe implications for the performance of our parallel code.
 
 \medskip
-\noindent In addition, compared to the serial code, here, each thread has more overhead attributed to it in terms of tracking the value of a boolean array, running a loop and updating the boolean array, all while performing the same calculations that the serial code is doing. These processes, though seemingly small, increase the computational complexity per thread, hence adding to the execution time.
+\noindent  In addition, considering the algorithm itself, the calculations being performed are simple, which would reduce its performance in a parallel computing sense. We would see a definite increase in performance if the calculations being done were more complex, such as the handling of complex floating point calculations.
+
+\medskip
+\noindent In addition, compared to the serial code which has only a single thread looping over the entire image and performing the calculations, here, each thread has more overhead attributed to it in terms of tracking the value of a boolean array, running a loop and updating the boolean array, all while performing the same calculations that the serial code is doing. These processes, though seemingly small, increase the computational complexity per thread, hence adding to the execution time.
 
 \subsection{Future Scope}
 
-Some interesting things that could be looked into with relation to the future scope of this project are
+Some interesting things that could be looked into in relation to the future scope of this project are
 
 \begin{itemize}
+
+    \item Finding better approaches to implement this algorithm that could lead to better performance with a little bit of tradeoff on the accuracy of the end result.
+    
     \item Implementing this algorithm using GPU-CPU communication\cite{Hartley}. Since GPUs have a high number of cores, it would be intersting to convert this algorithm into a form meant to run on them and study its performance.
 
     \item Modifying the current algorithm to work on video files.
 
-    \item Looking into other noise generation algorithms such as Atkinson Dithering and Perlin Noise.
+    \item Studying the memory taken up by the resultant images after dithering. Preliminary tests during the development of the code showed that, for smaller images, the dithered result would take up less space, however, for large images at 1080p and above, the result would take up much more space!
+
+    \item Looking into other noise generation algorithms such as Atkinson Dithering and Perlin Noise.\\ (Fun Fact: Perlin Noise was developed by Ken Perlin after working on the sci-fi motion film Tron(1982)).
 
 \end{itemize}
 

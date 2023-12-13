@@ -9,7 +9,7 @@ do
   printf "%i " "$i"
   while [[ j -le 15 ]]
   do
-    ./steinberg "$1" 0 1 1 1 $i
+    ./steinberg "$1" 1 1 1 $i
     ((j = j + 1))
   done
   printf "\n"

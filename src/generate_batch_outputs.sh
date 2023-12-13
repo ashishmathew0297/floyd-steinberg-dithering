@@ -5,8 +5,7 @@ NORMAL=$(tput sgr0)
 YELLOW=$(tput setaf 3)
 BOLD=$(tput bold)
 
-greyscale=$1
-factor=$2
+factor=$1
 
 g++ -Wall -std=c++11 -fopenmp -o steinberg main.cpp $(pkg-config --cflags --libs opencv4)
 
@@ -14,9 +13,9 @@ printf "%s%sPlease Wait:%s Generating processed images for all images in ../inpu
 
 for filename in ../input/*.*; do
   echo "Processing $(basename "${filename}")"
-  ./steinberg "$(basename "${filename}")" "$greyscale" 0 "$factor" 0 1 > /dev/null
-  ./steinberg "$(basename "${filename}")" "$greyscale" 1 "$factor" 0 1 > /dev/null
-  ./steinberg "$(basename "${filename}")" "$greyscale" 1 "$factor" 1 12 > /dev/null
+  ./steinberg "$(basename "${filename}")" 0 "$factor" 0 1 > /dev/null
+  ./steinberg "$(basename "${filename}")" 1 "$factor" 0 1 > /dev/null
+  ./steinberg "$(basename "${filename}")" 1 "$factor" 1 12 > /dev/null
 done
 
 printf "%s%sExecution finished:%s Please check the output folder for the results\n\n" "${BOLD}" "${GREEN}" "${NORMAL}"

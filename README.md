@@ -1,6 +1,6 @@
 # Floyd-Steinberg Dithering
 
-This is an implementation of the Floyd-Steinberg Dithering algorithm in C++ and OpenCV. The end goal of this project is to implement parallel processing concepts to this algorithm to see how it performs when working on high-resolution images.
+This project is an implementation of the Floyd-Steinberg Dithering algorithm in C++ and OpenCV. The end goal of this project is to implement parallel processing concepts to this algorithm and to see how it performs when working on high-resolution images.
 
 ## Downloading and Installing OpenCV from source
 
@@ -28,7 +28,7 @@ $ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/home/parallels/opencv4.8-custom/lib/p
 $ pkg-config --cflags --libs opencv4 # This confirms that all the libraries have been symbolic linked
 ```
 
-After the above steps are complete there is a huge chance you would get an error related to PATh variables and pkgconfig. Refer to the link below for the fix for this
+After the above steps are complete there is a huge chance you would get an error related to PATH variables and pkgconfig. Refer to the link below for the fix for this
 
 <https://stackoverflow.com/questions/15320267/package-opencv-was-not-found-in-the-pkg-config-search-path>
 
@@ -40,28 +40,32 @@ The last command `pkg-config --cflags --libs opencv4` should give us a list of p
 
 This is how we know that we have OpenCV up and running from the source code.
 
-**IMPORTANT NOTE:** I have tried this process on the Anvil supercomputer, however, due to the requirement of superuser permissions, and access to PATH variables, I was unable to get it to work. This should, however work well on your local system.
+**IMPORTANT NOTE:** I have tried this process on the Anvil supercomputer, however, due to the requirement of superuser permissions, and access to PATH variables, I was unable to get it to work. You might have better luck getting it to work on your local system.
 
-## Compiling the C++ Code
+Building OpenCV from the source code is probably one of the most difficult ways of obtaining this piece of software. There might be many cases where you might face issues in this process depending on which platform you are using, and getting it to work might involve a fair bit of trial and error.
 
-To build the code with a symbolic link to the CV package we will have to compile the code with the given flags
-
-```bash
-g++ -Wall -std=c++11 -o output_file program.cpp $(pkg-config --cflags --libs opencv4)
-```
+My current installation was done on Ubuntu under WSL, and I have documented all the steps I have taken to the best of my ability, please feel free to reach out in case any issues pop up.
 
 If the installation fails or you need to remove CV for any reason, the Stackoverflow post below will aid in the uninstallation of the program from your system
 
 <https://stackoverflow.com/questions/9276169/removing-all-installed-opencv-libs>
+
+## Compiling the C++ Code
+
+To build the code with a symbolic link to the CV package installed we will have to compile the code with the given flags
+
+```bash
+g++ -Wall -std=c++11 -o output_file program.cpp $(pkg-config --cflags --libs opencv4)
+```
 
 ## Compiling the report
 
 The report handles references using Biber. From the `reports/` folder, run the following commands to generate the report with citations.
 
 ```bash
-pdflatex project_report.tex
-biber project_report
-pdflatex project_report.tex
+pdflatex -shell-escape Final_Project_Report_AshishMathew.tex
+biber Final_Project_Report_AshishMathew
+pdflatex -shell-escape Final_Project_Report_AshishMathew.tex
 ```
 
 ## Project Structure
@@ -83,7 +87,7 @@ Here is the breakdown of the files in the `src/` folder.
 
 ## How to run the project
 
-Please ensure OpenCV has been installed as per the [instructions](#downloading-and-installing-opencv) above before any of the scripts below are run.
+Please ensure OpenCV has been installed as per the [instructions](#downloading-and-installing-opencv-from-source) above before any of the scripts below are run.
 
 Ensure all the shell scripts have execute permissions. Make any changes needed in the `run_scripts.sh` file if you want to generate a single result or want to process a batch of images. This shell script can be run with
 

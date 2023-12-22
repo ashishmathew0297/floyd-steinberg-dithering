@@ -1,10 +1,10 @@
 # Floyd-Steinberg Dithering
 
-This project is an implementation of the Floyd-Steinberg Dithering algorithm in C++ and OpenCV. The end goal of this project is to implement parallel processing concepts to this algorithm and to see how it performs when working on high-resolution images.
+This project is an implementation of the Floyd-Steinberg Dithering algorithm in C++ and OpenCV with the end goal of implementing parallel processing concepts to it and studying its performance on high-resolution images.
 
 ## Downloading and Installing OpenCV from source
 
-Our code works on OpenCV 4.8.1. The steps I have taken to install this particular version of the OpenCV are given below. These steps will for the most part work the same way they did on my machine.
+The code works on OpenCV 4.8.1. The steps I have taken to install this particular version of the OpenCV are given below. These steps will for the most part work the same way they did on my machine.
 
 ```bash
 $ mkdir ~/opencv4.8-tmp && cd ~/opencv4.8-tmp
@@ -38,13 +38,9 @@ The last command `pkg-config --cflags --libs opencv4` should give us a list of p
 -I/usr/include/opencv4 -lopencv_stitching -lopencv_alphamat -lopencv_aruco -lopencv_barcode -lopencv_bgsegm -lopencv_bioinspired -lopencv_ccalib -lopencv_dnn_objdetect -lopencv_dnn_superres -lopencv_dpm -lopencv_face -lopencv_freetype -lopencv_fuzzy -lopencv_hdf -lopencv_hfs -lopencv_img_hash -lopencv_intensity_transform -lopencv_line_descriptor -lopencv_mcc -lopencv_quality -lopencv_rapid -lopencv_reg -lopencv_rgbd -lopencv_saliency -lopencv_shape -lopencv_stereo -lopencv_structured_light -lopencv_phase_unwrapping -lopencv_superres -lopencv_optflow -lopencv_surface_matching -lopencv_tracking -lopencv_highgui -lopencv_datasets -lopencv_text -lopencv_plot -lopencv_ml -lopencv_videostab -lopencv_videoio -lopencv_viz -lopencv_wechat_qrcode -lopencv_ximgproc -lopencv_video -lopencv_xobjdetect -lopencv_objdetect -lopencv_calib3d -lopencv_imgcodecs -lopencv_features2d -lopencv_dnn -lopencv_flann -lopencv_xphoto -lopencv_photo -lopencv_imgproc -lopencv_core
 ```
 
-This is how we know that we have OpenCV up and running from the source code.
-
-**IMPORTANT NOTE:** I have tried this process on the Anvil supercomputer, however, due to the requirement of superuser permissions, and access to PATH variables, I was unable to get it to work. You might have better luck getting it to work on your local system.
+This confirms that OpenCV is up and running from the source code.
 
 Building OpenCV from the source code is probably one of the most difficult ways of obtaining this piece of software. There might be many cases where you might face issues in this process depending on which platform you are using, and getting it to work might involve a fair bit of trial and error.
-
-My current installation was done on Ubuntu under WSL, and I have documented all the steps I have taken to the best of my ability, please feel free to reach out in case any issues pop up.
 
 If the installation fails or you need to remove CV for any reason, the Stackoverflow post below will aid in the uninstallation of the program from your system
 
@@ -56,16 +52,6 @@ To build the code with a symbolic link to the CV package installed we will have 
 
 ```bash
 g++ -Wall -std=c++11 -o output_file program.cpp $(pkg-config --cflags --libs opencv4)
-```
-
-## Compiling the report
-
-The report handles references using Biber. From the `reports/` folder, run the following commands to generate the report with citations.
-
-```bash
-pdflatex -shell-escape Final_Project_Report_AshishMathew.tex
-biber Final_Project_Report_AshishMathew
-pdflatex -shell-escape Final_Project_Report_AshishMathew.tex
 ```
 
 ## Project Structure
@@ -100,5 +86,5 @@ If you want to compile and execute the C program, run the following.
 ```shell
 g++ -Wall -std=c++11 -o output_file main.cpp $(pkg-config --cflags --libs opencv4)
 
-./output_file <input_filename> <greyscale(0 or 1)> <dithered(0 or 1)> <factor(0 or 1)> <parallel(0 or 1)> <threads(The value is system dependent)>
+./output_file <input_filename> <dithered(0 or 1)> <factor(0 or 1)> <parallel(0 or 1)> <threads(The value is system dependent)>
 ```
